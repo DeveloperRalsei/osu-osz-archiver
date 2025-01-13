@@ -2,59 +2,99 @@ package main
 
 import (
 	"archive/zip"
+	"flag"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-// default flags
-
-var out string = "out/"
-
 func main() {
-	args := os.Args
+	filePathFlag := flag.String("file", "", "Enter the path of .osz file")
+	targetPathFlag := flag.String("target", "out/", "Enter the path of target file")
+	flag.Parse()
 
-	if len(args) < 2 {
-		fmt.Printf("Please enter a parameter first\n")
+	if *filePathFlag == "" {
+		fmt.Println("Please enter a valid path")
+		return
+	}
+	if !strings.HasSuffix(*filePathFlag, ".osz") {
+		fmt.Println("File is not valid (osz)")
 		return
 	}
 
-	filePath := args[1]
+	fmt.Println("Opening file...")
+	r, err := zip.OpenReader(*filePathFlag)
+	if err != nil {
+		fmt.Printf("Error opening file: %v\n", err)
+		panic(err)
+	}
+	defer r.Close()
 
-	if !strings.HasSuffix(filePath, ".osz") {
-		fmt.Printf("The file format must be \"osz\" \n")
-		return
+	if *targetPathFlag == "out/" {
+		mkdirIfOutPathIsNotDefined()
 	}
 
-	file, err := os.Open(filePath)
+	beatmapFolder, mathced := strings.CutSuffix(*filePathFlag, ".osz")
+	if !mathced {
+		panic("File could not mathced")
+	}
+
+	err = os.Mkdir(
+		beatmapFolder,
+		0755,
+	)
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
 
-	writer := zip.NewWriter(file)
-	defer writer.Close()
+	for _, f := range r.File {
+		targetPath := filepath.Join(*targetPathFlag, f.Name)
 
-	directories, err := os.ReadDir(".")
+		err = extarctFile(f, targetPath)
+		if err != nil {
+			fmt.Printf("Error extracting file %v: %v\n", f.Name, err)
+			continue
+		}
+	}
+}
+
+func mkdirIfOutPathIsNotDefined() {
+	dirs, err := os.ReadDir(".")
 	if err != nil {
 		panic(err)
 	}
 
-	exists := false
-	for _, dir := range directories {
-		if dir.Name() == "out" && dir.IsDir() {
-			exists = true
+	for _, dir := range dirs {
+		if dir.IsDir() && dir.Name() == "out/" {
+			os.Mkdir("out", 0755)
 			break
 		}
 	}
-	if !exists {
-		os.Mkdir("out", 0755)
+}
+
+func extarctFile(f *zip.File, targetPath string) error {
+	srcFile, err := f.Open()
+	if err != nil {
+		panic(err)
+	}
+	defer srcFile.Close()
+
+	if !f.FileInfo().IsDir() {
+		err = os.MkdirAll(filepath.Dir(targetPath), os.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
 
-	beatmapFolder := strings.SplitAfter(
-		fmt.Sprintf("out/%s", file.Name()),
-		".osz",
-	)
+	dstFile, err := os.Create(targetPath)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
 
-	fmt.Printf("beatmapFolder: %v\n", beatmapFolder)
+	fmt.Printf("Extracting %v to %v\n", f.Name, targetPath)
+	_, err = io.Copy(dstFile, srcFile)
+	return err
 }
