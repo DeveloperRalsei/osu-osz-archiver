@@ -10,7 +10,12 @@ import (
 	"strings"
 )
 
+var beatmapFolder string
+
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+	}
 	filePathFlag := flag.String("file", "", "Enter the path of .osz file")
 	targetPathFlag := flag.String("target", "out/", "Enter the path of target file")
 	flag.Parse()
@@ -36,21 +41,17 @@ func main() {
 		mkdirIfOutPathIsNotDefined()
 	}
 
-	beatmapFolder, mathced := strings.CutSuffix(*filePathFlag, ".osz")
+	bFolder, mathced := strings.CutSuffix(*filePathFlag, ".osz")
+	beatmapFolder = bFolder
+
+	mkdirBeatmapFolder()
+
 	if !mathced {
 		panic("File could not mathced")
 	}
 
-	err = os.Mkdir(
-		beatmapFolder,
-		0755,
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	for _, f := range r.File {
-		targetPath := filepath.Join(*targetPathFlag, f.Name)
+		targetPath := filepath.Join(bFolder, f.Name)
 
 		err = extarctFile(f, targetPath)
 		if err != nil {
@@ -97,4 +98,26 @@ func extarctFile(f *zip.File, targetPath string) error {
 	fmt.Printf("Extracting %v to %v\n", f.Name, targetPath)
 	_, err = io.Copy(dstFile, srcFile)
 	return err
+}
+
+func mkdirBeatmapFolder() {
+	files, err := os.ReadDir(".")
+
+	for _, file := range files {
+		if file.Name() != beatmapFolder {
+			continue
+		} else {
+			err = os.Mkdir(
+				beatmapFolder,
+				0755,
+			)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	if err != nil {
+		panic(err)
+	}
 }
