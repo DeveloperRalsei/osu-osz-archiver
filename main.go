@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -10,23 +11,30 @@ import (
 	"strings"
 )
 
-var beatmapFolder string
-
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
-	}
 	filePathFlag := flag.String("file", "", "Enter the path of .osz file")
-	targetPathFlag := flag.String("target", "out/", "Enter the path of target file")
+
+	homeDir, exist := os.LookupEnv("HOME")
+	if !exist {
+		fmt.Printf("HOME enviroment not set")
+		os.Exit(1)
+	}
+	targetFlag := flag.String(
+		"target",
+		filepath.Join(homeDir, ".osu", "Songs"),
+		"Excarting file location",
+	)
 	flag.Parse()
 
 	if *filePathFlag == "" {
 		fmt.Println("Please enter a valid path")
-		return
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 	if !strings.HasSuffix(*filePathFlag, ".osz") {
 		fmt.Println("File is not valid (osz)")
-		return
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 
 	fmt.Println("Opening file...")
@@ -37,26 +45,23 @@ func main() {
 	}
 	defer r.Close()
 
-	if *targetPathFlag == "out/" {
-		mkdirIfOutPathIsNotDefined()
-	}
+	beatmapFolderName := strings.TrimSuffix(*filePathFlag, ".osz")
+	exportLocation := *targetFlag + beatmapFolderName
 
-	bFolder, mathced := strings.CutSuffix(*filePathFlag, ".osz")
-	beatmapFolder = bFolder
-
-	mkdirBeatmapFolder()
-
-	if !mathced {
-		panic("File could not mathced")
+	// _, err := mkdirBeatmapFolder(&exportLocation, *targetFlag, homeDir)
+	bFolderLocation, err := mkdirBeatmapFolder(&exportLocation, *targetFlag, homeDir)
+	if err != nil {
+		panic(err)
 	}
 
 	for _, f := range r.File {
-		targetPath := filepath.Join(bFolder, f.Name)
+		targetPath := filepath.Join(bFolderLocation, f.Name)
 
 		err = extarctFile(f, targetPath)
 		if err != nil {
 			fmt.Printf("Error extracting file %v: %v\n", f.Name, err)
-			continue
+
+			break
 		}
 	}
 }
@@ -100,24 +105,27 @@ func extarctFile(f *zip.File, targetPath string) error {
 	return err
 }
 
-func mkdirBeatmapFolder() {
-	files, err := os.ReadDir(".")
+func mkdirBeatmapFolder(bFolder *string, targetPath string, homedir string) (beatmapFolderLocation string, err error) {
+	files, err := os.ReadDir(targetPath)
+
+	var bFolderLocName string
 
 	for _, file := range files {
-		if file.Name() != beatmapFolder {
-			continue
+		if file.Name() != *bFolder {
+			fileLocation := filepath.Join(homedir, file.Name())
+
+			fmt.Printf("fileLocation: %v\n", fileLocation)
+			bFolderLocName = file.Name()
+			return fileLocation, nil
 		} else {
-			err = os.Mkdir(
-				beatmapFolder,
+			err := os.Mkdir(
+				*bFolder,
 				0755,
 			)
 			if err != nil {
-				panic(err)
+				return "", errors.New("Couldn't create beatmapFolder")
 			}
 		}
 	}
-
-	if err != nil {
-		panic(err)
-	}
+	return bFolderLocName, nil
 }
