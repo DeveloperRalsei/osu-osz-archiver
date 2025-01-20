@@ -28,3 +28,7 @@ out/
 .env
 *.os*
 *.bak
+*.osu
+*.mp3
+bg.png
+OOA*
