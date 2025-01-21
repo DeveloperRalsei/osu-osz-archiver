@@ -70,8 +70,8 @@ func askForBeatmapFileViaCmd(cmd *cobra.Command) *os.File {
 }
 
 func createOutDirectory() error {
-	var err error
-	if _, err := os.Stat("out"); err == nil {
+	stat, err := os.Stat("out")
+	if err == nil && stat.IsDir() {
 		return nil
 	}
 

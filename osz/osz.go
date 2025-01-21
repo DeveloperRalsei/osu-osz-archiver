@@ -37,11 +37,24 @@ Creates a folder that holding beatmap files. Takes to arguments.
 2. where: spesific folder that containes beatmap file
 */
 func CreateBeatmapFolder(file *os.File, where string) error {
+	beatmapFolderName := filepath.Base(
+		strings.TrimSuffix(file.Name(), ".osz"),
+	)
+
+	entries, err := os.ReadDir(where)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.Name() == beatmapFolderName && entry.IsDir() {
+			return nil
+		}
+	}
+
 	folderPath := filepath.Join(
 		where,
-		filepath.Base(
-			strings.TrimSuffix(file.Name(), ".osz"),
-		),
+		beatmapFolderName,
 	)
 
 	if err := os.Mkdir(folderPath, 0755); err != nil {
