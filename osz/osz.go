@@ -3,6 +3,7 @@ package osz
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,4 +29,23 @@ func CheckOSZFile(file *os.File) (bool, string) {
 	}
 
 	return true, ""
+}
+
+/*
+Creates a folder that holding beatmap files. Takes to arguments.
+1. file: beatmap file
+2. where: spesific folder that containes beatmap file
+*/
+func CreateBeatmapFolder(file *os.File, where string) error {
+	folderPath := filepath.Join(
+		where,
+		filepath.Base(
+			strings.TrimSuffix(file.Name(), ".osz"),
+		),
+	)
+
+	if err := os.Mkdir(folderPath, 0755); err != nil {
+		return err
+	}
+	return nil
 }

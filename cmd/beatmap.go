@@ -8,70 +8,82 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var textInput = p.DefaultInteractiveTextInput.WithDefaultText("Write path of beatmap file")
+
 var beatmapCmd = &cobra.Command{
 	Use:   "beatmap",
 	Short: "Define an osz file with file flag",
 	Run: func(cmd *cobra.Command, args []string) {
-		beatmap, _ := cmd.Flags().GetString("file")
-		textInput := p.DefaultInteractiveTextInput.WithDefaultText("Write path of beatmap file")
+		outLocation, err := cmd.Flags().GetString("out")
+		if err != nil {
+			p.Error.Printfln("%s 19", err.Error())
+			os.Exit(1)
+		}
 
-	openFileViaTextInput:
-		var beatmap_file *os.File
+		if outLocation == "out" {
+			err := createOutDirectory()
+			if err != nil {
+				p.Error.Printfln("%s 26", err.Error())
+				os.Exit(1)
+			}
+		}
+
+		beatmap_file := askForBeatmapFileViaCmd(cmd)
+		defer beatmap_file.Close()
+
+		err = osz.CreateBeatmapFolder(beatmap_file, outLocation)
+		if err != nil {
+			p.Error.Printfln("%s 36", err.Error())
+			os.Exit(1)
+		}
+	},
+}
+
+// Asks user for beatmap file via cmd
+func askForBeatmapFileViaCmd(cmd *cobra.Command) *os.File {
+	beatmap, _ := cmd.Flags().GetString("file")
+
+	for {
 		if beatmap == "" {
 			value, _ := textInput.Show("")
 			beatmap = value
 		}
 
-		file, err := os.Open(beatmap)
+		beatmap_file, err := os.Open(beatmap)
 		if err != nil {
-			p.Error.Printfln("Error: %s", err.Error())
+			p.Error.Printfln("%s 54", err.Error())
 			beatmap = ""
-			goto openFileViaTextInput
-
+			continue
 		}
-		defer file.Close()
-		beatmap_file = file
 
 		valid, errMsg := osz.CheckOSZFile(beatmap_file)
 		if !valid {
 			p.Error.Println(errMsg)
 			beatmap = ""
-			goto openFileViaTextInput
+			beatmap_file.Close()
+			continue
 		}
 
-		out, err := cmd.Flags().GetString("out")
-		if err != nil {
-			p.Error.Printfln("Something went wrong while getting out flag value : %s", err.Error())
-			os.Exit(1)
-		}
+		return beatmap_file
 
-		if out == "out/" {
-			entries, err := os.ReadDir(".")
-			if err != nil {
-				p.Error.Printfln("Error: %s", err.Error())
-			}
+	}
+}
 
-			isOutDirExist := false
-			for _, entry := range entries {
-				if entry.IsDir() && entry.Name() == "out/" {
-					isOutDirExist = true
-					break
-				}
-			}
+func createOutDirectory() error {
+	var err error
+	if _, err := os.Stat("out"); err == nil {
+		return nil
+	}
 
-			if !isOutDirExist {
-				err = os.Mkdir("out", 0755)
-				if err != nil {
-					p.Error.Printfln("Something went wrong when trying to create out folder: %s", err.Error())
-				}
-				p.Info.Println("Created an out directory")
-			}
-		}
-	},
+	if os.IsNotExist(err) {
+		return os.Mkdir("out", 0755)
+	}
+
+	return err
 }
 
 func init() {
 	rootCmd.AddCommand(beatmapCmd)
 	beatmapCmd.Flags().StringP("file", "f", "", "Specify the osz file")
-	beatmapCmd.Flags().StringP("out", "o", "out/", "Specify the export location")
+	beatmapCmd.Flags().StringP("out", "o", "out", "Specify the export location (without \"/\"")
 }
