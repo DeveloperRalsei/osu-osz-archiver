@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// func ReadAndExportOSZ(file *os.File) error {
+// }
+
 // Checks if the file complies with the osz type and returns a bool and a error message
 func CheckOSZFile(file *os.File) (bool, string) {
 	fileInfo, err := file.Stat()
@@ -36,19 +39,19 @@ Creates a folder that holding beatmap files. Takes to arguments.
 1. file: beatmap file
 2. where: spesific folder that containes beatmap file
 */
-func CreateBeatmapFolder(file *os.File, where string) error {
+func CreateBeatmapFolder(file *os.File, where string) (string, error) {
 	beatmapFolderName := filepath.Base(
 		strings.TrimSuffix(file.Name(), ".osz"),
 	)
 
 	entries, err := os.ReadDir(where)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, entry := range entries {
 		if entry.Name() == beatmapFolderName && entry.IsDir() {
-			return nil
+			return filepath.Join(where, beatmapFolderName), nil
 		}
 	}
 
@@ -58,7 +61,7 @@ func CreateBeatmapFolder(file *os.File, where string) error {
 	)
 
 	if err := os.Mkdir(folderPath, 0755); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return "", nil
 }
