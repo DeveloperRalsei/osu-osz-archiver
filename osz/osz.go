@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	p "github.com/pterm/pterm"
 )
 
 // func ReadAndExportOSZ(file *os.File) error {
@@ -35,7 +37,7 @@ func CheckOSZFile(file *os.File) (bool, string) {
 }
 
 /*
-Creates a folder that holding beatmap files. Takes to arguments.
+Creates a folder that holding beatmap files and returns the existed/created folder path. Takes to arguments.
 1. file: beatmap file
 2. where: spesific folder that containes beatmap file
 */
@@ -63,5 +65,6 @@ func CreateBeatmapFolder(file *os.File, where string) (string, error) {
 	if err := os.Mkdir(folderPath, 0755); err != nil {
 		return "", err
 	}
-	return "", nil
+	p.Info.Println("Out directory created")
+	return filepath.Join(folderPath), nil
 }

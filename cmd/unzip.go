@@ -4,8 +4,11 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"archive/zip"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/developerRalsei/osu-osz-archiver/osz"
 	p "github.com/pterm/pterm"
@@ -31,7 +34,7 @@ func askForBeatmapFileViaCmd(cmd *cobra.Command) *os.File {
 
 		beatmap_file, err := os.Open(beatmap)
 		if err != nil {
-			p.Error.Printfln("%s 54", err.Error())
+			p.Error.Printfln("%s 36", err.Error())
 			beatmap = ""
 			continue
 		}
@@ -65,14 +68,14 @@ func createOutDirectory() error {
 func unzipCommandFunc(cmd *cobra.Command, args []string) {
 	outLocation, err := cmd.Flags().GetString("out")
 	if err != nil {
-		p.Error.Printfln("%s 21", err.Error())
+		p.Error.Printfln("%s 70", err.Error())
 		os.Exit(1)
 	}
 
 	if outLocation == "out" {
 		err := createOutDirectory()
 		if err != nil {
-			p.Error.Printfln("%s 28", err.Error())
+			p.Error.Printfln("%s 77", err.Error())
 			os.Exit(1)
 		}
 	}
@@ -80,13 +83,54 @@ func unzipCommandFunc(cmd *cobra.Command, args []string) {
 	beatmap_file := askForBeatmapFileViaCmd(cmd)
 	defer beatmap_file.Close()
 
+	beatmap_file_path := filepath.Join(beatmap_file.Name())
+
 	beatmap_folder, err := osz.CreateBeatmapFolder(beatmap_file, outLocation)
 	if err != nil {
-		p.Error.Printfln("%s 38", err.Error())
+		p.Error.Printfln("%s 89", err.Error())
 		os.Exit(1)
 	}
-
 	fmt.Printf("beatmap_folder: %v\n", beatmap_folder)
+
+	r, err := zip.OpenReader(beatmap_file_path)
+	if err != nil {
+		p.Error.Printfln("%s 85", err.Error())
+		os.Exit(1)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		destPath := filepath.Join(beatmap_folder, f.Name)
+
+		// Eğer bir dizinse oluştur
+		if f.FileInfo().IsDir() {
+			err := os.MkdirAll(destPath, os.ModePerm)
+			if err != nil {
+				p.Error.Printfln("Failed to create directory: %s", err.Error())
+			}
+			continue
+		}
+
+		srcFile, err := f.Open()
+		if err != nil {
+			p.Error.Printfln("Failed to open file in archive: %s", err.Error())
+			continue
+		}
+		defer srcFile.Close()
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			p.Error.Printfln("Failed to create destination file: %s", err.Error())
+			continue
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, srcFile)
+		if err != nil {
+			p.Error.Printfln("Failed to copy file contents: %s", err.Error())
+		}
+		p.Success.Printfln("🎊️ Copied file successfuly: %s", destFile.Name())
+	}
 }
 
 func init() {
