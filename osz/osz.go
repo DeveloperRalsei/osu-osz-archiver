@@ -68,3 +68,5 @@ func CreateBeatmapFolder(file *os.File, where string) (string, error) {
 	p.Info.Println("Out directory created")
 	return filepath.Join(folderPath), nil
 }
+
+// meow :3
