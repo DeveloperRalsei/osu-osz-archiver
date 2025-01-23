@@ -1,7 +1,4 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
-package cmd
+package beatmap
 
 import (
 	"archive/zip"
@@ -102,7 +99,6 @@ func unzipCommandFunc(cmd *cobra.Command, args []string) {
 	for _, f := range r.File {
 		destPath := filepath.Join(beatmap_folder, f.Name)
 
-		// Eğer bir dizinse oluştur
 		if f.FileInfo().IsDir() {
 			err := os.MkdirAll(destPath, os.ModePerm)
 			if err != nil {
@@ -134,7 +130,7 @@ func unzipCommandFunc(cmd *cobra.Command, args []string) {
 }
 
 func init() {
-	beatmapCmd.AddCommand(unzipCommand)
+	BeatmapCmd.AddCommand(unzipCommand)
 	unzipCommand.Flags().StringP("file", "f", "", "Specify the osz file")
 	unzipCommand.Flags().StringP("out", "o", "out", "Specify the export location (without \"/\"")
 }

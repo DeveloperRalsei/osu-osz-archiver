@@ -1,10 +1,10 @@
-package cmd
+package beatmap
 
 import (
 	"github.com/spf13/cobra"
 )
 
-var beatmapCmd = &cobra.Command{
+var BeatmapCmd = &cobra.Command{
 	Use:   "beatmap",
 	Short: "Define an osz file with file flag",
 	Long:  "Zip and Unzip beatmap files",
@@ -14,5 +14,4 @@ var beatmapCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(beatmapCmd)
 }
