@@ -14,4 +14,6 @@ var BeatmapCmd = &cobra.Command{
 }
 
 func init() {
+	BeatmapCmd.AddCommand(unzipCommand)
+	BeatmapCmd.AddCommand(zipCmd)
 }

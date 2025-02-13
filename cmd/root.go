@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/developerRalsei/osu-osz-archiver/cmd/beatmap"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,7 @@ var RootCmd = &cobra.Command{
 func Execute() {
 	err := RootCmd.Execute()
 	if err != nil {
+		pterm.Error.Printfln("Error: %s", err.Error())
 		os.Exit(1)
 	}
 }
